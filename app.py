@@ -9,8 +9,12 @@ import re
 import spacy
 from textblob import TextBlob
 
-# Load Spacy model for NLP processing
-nlp = spacy.load("en_core_web_sm")
+# Ensure Spacy model is installed
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+    nlp = spacy.load("en_core_web_sm")
 
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
