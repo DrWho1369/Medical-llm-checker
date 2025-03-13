@@ -6,3 +6,4 @@ markdown
 sentence-transformers
 matplotlib
 textblob
+nltk
