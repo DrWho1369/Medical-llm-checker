@@ -4,4 +4,6 @@ requests
 pandas
 markdown
 sentence-transformers
-
+matplotlib
+spacy
+textblob
