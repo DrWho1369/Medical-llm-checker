@@ -157,5 +157,13 @@ if st.button("🔎 Analyze Response"):
                     st.warning(bias_report)
                 else:
                     st.success("No explicit bias detected.")
+                    
+        feedback = st.text_area("✍️ **Provide Feedback:**", help="Share any corrections, concerns, or additional insights.")
+        if st.button("📩 Submit Feedback"):
+            if feedback:
+                if save_feedback(query, llm_response, feedback):
+                    st.success("✅ Thank you! Your feedback has been recorded.")
+            else:
+                st.warning("⚠️ Please enter feedback before submitting.")
     else:
         st.warning("Please enter a medical question.")
