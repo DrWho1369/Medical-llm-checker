@@ -8,9 +8,10 @@ from sentence_transformers import SentenceTransformer, util
 import re
 from textblob import TextBlob
 import nltk
+nltk.download("punkt")  # Ensure tokenizer model is available
+
 from nltk.tokenize import sent_tokenize, word_tokenize
 
-nltk.download("punkt")  
 
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
