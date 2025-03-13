@@ -7,4 +7,4 @@ sentence-transformers
 matplotlib
 spacy
 textblob
-spacy[en_core_web_sm]
+spacy-lookups-data
