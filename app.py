@@ -9,11 +9,13 @@ import re
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
     openai.api_key = st.secrets["OPENAI_API_KEY"]
-    response = openai.ChatCompletion.create(
+    client = openai.OpenAI()
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": query}]
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
+
 
 def get_pubmed_articles(query):
     """Fetch related medical articles from PubMed."""
@@ -38,7 +40,7 @@ def get_pubmed_articles(query):
 
 def check_similarity(llm_response, medical_articles):
     """Check similarity between LLM response and trusted medical sources."""
-    model = SentenceTransformer("allenai/specter")  # Pretrained biomedical sentence embedding model
+    model = SentenceTransformer("allenai/specter", device="cpu")  # Pretrained biomedical sentence embedding model
     response_embedding = model.encode(llm_response, convert_to_tensor=True)
     scores = []
     citations = []
