@@ -12,9 +12,8 @@ from textblob import TextBlob
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
-    from spacy.cli import download
-    download("en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+    st.error("Spacy model `en_core_web_sm` is missing. Ensure it is installed in `requirements.txt`.")
+    st.stop()
 
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
