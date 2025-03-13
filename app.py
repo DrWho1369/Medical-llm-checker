@@ -5,15 +5,10 @@ import pandas as pd
 import os
 from sentence_transformers import SentenceTransformer, util
 import re
-from markdown import markdown
-
-def load_openai_api_key():
-    """Load OpenAI API key from environment variables."""
-    return os.getenv("OPENAI_API_KEY")
 
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
-    openai.api_key = load_openai_api_key()
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[{"role": "user", "content": query}]
@@ -111,7 +106,7 @@ if st.button("Check Response"):
             bias_detected, highlighted_response = detect_bias(llm_response)
             
             st.subheader("LLM Response:")
-            st.markdown(highlighted_response)
+            st.markdown(highlighted_response, unsafe_allow_html=True)
             
             st.subheader("Trustworthiness Score:")
             st.write(f"Similarity to trusted medical sources: {similarity_score:.2f}")
