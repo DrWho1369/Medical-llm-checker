@@ -117,16 +117,7 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 query = st.text_input("🩺 **Enter a medical question:**", help="Ask a medical-related question to analyze AI accuracy and bias.")
-feedback = st.text_area("✍️ **Provide Feedback:**", help="Share any corrections, concerns, or additional insights.")
-feedback_submitted = st.button("📩 Submit Feedback")
 
-if feedback_submitted:
-    if feedback:
-        if save_feedback(query, "LLM response here", feedback):
-            st.success("✅ Thank you! Your feedback has been recorded.")
-    else:
-        st.warning("⚠️ Please enter feedback before submitting.")
-        
 if st.button("🔎 Analyze Response"):
     if query:
         with st.spinner("Fetching response and analyzing..."):
@@ -157,9 +148,9 @@ if st.button("🔎 Analyze Response"):
                     st.warning(bias_report)
                 else:
                     st.success("No explicit bias detected.")
-                    
-        feedback = st.text_area("✍️ **Provide Feedback:**", help="Share any corrections, concerns, or additional insights.")
-        if st.button("📩 Submit Feedback"):
+
+        feedback = st.text_area("Provide Feedback", key="feedback_input", help="Share any corrections, concerns, or additional insights.")
+        if st.button("Submit Feedback", key="feedback_button"):
             if feedback:
                 if save_feedback(query, llm_response, feedback):
                     st.success("✅ Thank you! Your feedback has been recorded.")
