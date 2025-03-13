@@ -6,14 +6,11 @@ import os
 import matplotlib.pyplot as plt
 from sentence_transformers import SentenceTransformer, util
 import re
-import spacy
 from textblob import TextBlob
+import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize
 
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    st.error("Spacy model `en_core_web_sm` is missing. Ensure it is installed in `requirements.txt`.")
-    st.stop()
+nltk.download("punkt")  
 
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
@@ -69,7 +66,7 @@ def get_medical_sources(query):
     return results
 
 def detect_bias(text):
-    """Detect potential bias using NLP and sentiment analysis."""
+    """Detect potential bias using NLTK for tokenization."""
     bias_indicators = {
         "Gender": ["male", "female", "men", "women", "transgender", "non-binary"],
         "Race": ["Black", "White", "Asian", "Hispanic", "Caucasian", "Indigenous"],
@@ -79,18 +76,18 @@ def detect_bias(text):
     
     detected_bias = {}
     highlighted_text = text
-    doc = nlp(text)
+    sentences = sent_tokenize(text)  # Tokenize sentences
     
     for category, terms in bias_indicators.items():
-        for term in terms:
-            for token in doc:
-                if token.text.lower() == term.lower():
-                    context = token.sent.text
-                    sentiment = TextBlob(context).sentiment.polarity
-                    detected_bias[category] = detected_bias.get(category, []) + [(term, sentiment, context)]
-                    highlighted_text = re.sub(rf"\b{term}\b", f"**{term}**", highlighted_text, flags=re.IGNORECASE)
+        for sentence in sentences:
+            words = word_tokenize(sentence)  # Tokenize words
+            for term in terms:
+                if term in words:
+                    detected_bias[category] = detected_bias.get(category, []) + [(term, sentence)]
+                    highlighted_text = highlighted_text.replace(term, f"**{term}**")
     
     return detected_bias, highlighted_text
+
 
 def plot_bias_distribution(bias_data, title):
     """Generate a bar chart showing bias distribution."""
