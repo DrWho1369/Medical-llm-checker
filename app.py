@@ -3,8 +3,14 @@ import openai
 import requests
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
 from sentence_transformers import SentenceTransformer, util
 import re
+import spacy
+from textblob import TextBlob
+
+# Load Spacy model for NLP processing
+nlp = spacy.load("en_core_web_sm")
 
 def get_llm_response(query):
     """Fetch response from an LLM (GPT-4)."""
@@ -15,6 +21,29 @@ def get_llm_response(query):
         messages=[{"role": "user", "content": query}]
     )
     return response.choices[0].message.content
+
+def fetch_pubmed_articles(query):
+    """Fetch articles from PubMed."""
+    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    params = {"db": "pubmed", "term": query, "retmode": "json", "retmax": 5}
+    response = requests.get(base_url, params=params)
+    article_ids = response.json().get("esearchresult", {}).get("idlist", [])
+    
+    articles = []
+    for article_id in article_ids:
+        fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        fetch_params = {"db": "pubmed", "id": article_id, "rettype": "abstract", "retmode": "text"}
+        article_response = requests.get(fetch_url, params=fetch_params)
+        articles.append(article_response.text)
+    
+    return articles
+
+def fetch_google_scholar_articles(query):
+    """Fetch articles from Google Scholar (via Semantic Scholar API)."""
+    url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={query}&fields=title,abstract"
+    response = requests.get(url)
+    data = response.json().get("data", [])
+    return [entry.get("abstract", "No abstract available") for entry in data]
 
 def get_medical_sources(query):
     """Fetch data from multiple sources."""
@@ -31,130 +60,76 @@ def get_medical_sources(query):
         results[name] = response.text if response.status_code == 200 else "No data found"
     
     # Fetch PubMed articles separately
-    pubmed_articles = get_pubmed_articles(query)
-    results["PubMed"] = " ".join([text for _, text in pubmed_articles]) if pubmed_articles else "No data found"
+    pubmed_articles = fetch_pubmed_articles(query)
+    results["PubMed"] = " ".join([text for text in pubmed_articles]) if pubmed_articles else "No data found"
     
     return results
 
-def get_pubmed_articles(query):
-    """Fetch related medical articles from PubMed."""
-    base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-    params = {
-        "db": "pubmed",
-        "term": query,
-        "retmode": "json",
-        "retmax": 5  # Get top 5 related articles
-    }
-    response = requests.get(base_url, params=params)
-    article_ids = response.json().get("esearchresult", {}).get("idlist", [])
-    
-    articles = []
-    for article_id in article_ids:
-        fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
-        fetch_params = {"db": "pubmed", "id": article_id, "rettype": "abstract", "retmode": "text"}
-        article_response = requests.get(fetch_url, params=fetch_params)
-        articles.append((article_id, article_response.text))
-    
-    return articles
-
-def check_similarity(llm_response, medical_sources):
-    """Check similarity between LLM response and multiple trusted medical sources."""
-    model = SentenceTransformer("allenai/specter", device="cpu")
-    response_embedding = model.encode(llm_response, convert_to_tensor=True)
-    scores = []
-    citations = []
-    
-    for source_name, source_text in medical_sources.items():
-        source_embedding = model.encode(source_text, convert_to_tensor=True)
-        similarity = util.pytorch_cos_sim(response_embedding, source_embedding).item()
-        scores.append((source_name, similarity, source_text[:200]))
-    
-    scores.sort(key=lambda x: x[1], reverse=True)
-    top_citations = scores[:3]
-    avg_similarity = sum([s[1] for s in top_citations]) / len(top_citations) if top_citations else 0
-    
-    for source_name, similarity, snippet in top_citations:
-        citations.append(f"**{source_name}** - Similarity: {similarity:.2f}\n*Snippet:* {snippet}...")
-    
-    return avg_similarity, citations
-
-def detect_bias(llm_response):
-    """Detect potential demographic bias in the LLM response and highlight flagged terms."""
+def detect_bias(text):
+    """Detect potential bias using NLP and sentiment analysis."""
     bias_indicators = {
-        "gender": ["male", "female", "men", "women", "transgender", "non-binary"],
-        "race": ["Black", "White", "Asian", "Hispanic", "Caucasian", "Indigenous"],
-        "age": ["elderly", "young", "children", "teenager", "middle-aged"],
-        "socioeconomic": ["rich", "poor", "low-income", "high-income", "privileged", "underprivileged"]
+        "Gender": ["male", "female", "men", "women", "transgender", "non-binary"],
+        "Race": ["Black", "White", "Asian", "Hispanic", "Caucasian", "Indigenous"],
+        "Age": ["elderly", "young", "children", "teenager", "middle-aged"],
+        "Socioeconomic": ["rich", "poor", "low-income", "high-income", "privileged", "underprivileged"]
     }
     
     detected_bias = {}
-    highlighted_response = llm_response
+    highlighted_text = text
+    doc = nlp(text)
+    
     for category, terms in bias_indicators.items():
         for term in terms:
-            if re.search(rf"\b{term}\b", llm_response, re.IGNORECASE):
-                detected_bias[category] = detected_bias.get(category, 0) + 1
-                highlighted_response = re.sub(rf"\b{term}\b", f"**{term}**", highlighted_response, flags=re.IGNORECASE)
+            for token in doc:
+                if token.text.lower() == term.lower():
+                    context = token.sent.text
+                    sentiment = TextBlob(context).sentiment.polarity
+                    detected_bias[category] = detected_bias.get(category, []) + [(term, sentiment, context)]
+                    highlighted_text = re.sub(rf"\b{term}\b", f"**{term}**", highlighted_text, flags=re.IGNORECASE)
     
-    return detected_bias, highlighted_response
+    return detected_bias, highlighted_text
 
-def save_feedback(query, response, feedback):
-    """Save user feedback to a CSV file."""
-    feedback_data = pd.DataFrame([[query, response, feedback]], columns=["Query", "Response", "Feedback"])
-    try:
-        feedback_data.to_csv("feedback.csv", mode='a', header=False, index=False)
-        return True
-    except Exception as e:
-        st.error(f"Error saving feedback: {e}")
-        return False
+def plot_bias_distribution(bias_data, title):
+    """Generate a bar chart showing bias distribution."""
+    if bias_data:
+        categories = list(bias_data.keys())
+        counts = [len(bias_data[cat]) for cat in categories]
+        
+        plt.figure(figsize=(6, 4))
+        plt.bar(categories, counts, color=["red", "blue", "green", "purple"])
+        plt.xlabel("Bias Categories")
+        plt.ylabel("Occurrences")
+        plt.title(title)
+        st.pyplot(plt)
+    else:
+        st.info("No bias detected.")
 
 # Streamlit App UI
 st.set_page_config(page_title="Medical LLM Bias & Misinformation Checker", layout="wide")
 st.title("🔍 Medical LLM Bias & Misinformation Checker")
-st.markdown("""<style>
-    .stTextInput, .stButton, .stMarkdown, .stAlert {
-        font-size: 18px !important;
-    }
-</style>""", unsafe_allow_html=True)
 
-query = st.text_input("🩺 **Enter a medical question:**", help="Ask a medical-related question to analyze AI accuracy and bias.")
+query = st.text_input("🩺 **Enter a medical question:**", help="Analyze AI accuracy and bias.")
 
 if st.button("🔎 Analyze Response"):
     if query:
         with st.spinner("Fetching response and analyzing..."):
             llm_response = get_llm_response(query)
             medical_sources = get_medical_sources(query)
-            similarity_score, citations = check_similarity(llm_response, medical_sources)
-            bias_detected, highlighted_response = detect_bias(llm_response)
+            
+            bias_detected_llm, highlighted_llm = detect_bias(llm_response)
+            bias_detected_sources = {source: detect_bias(text)[0] for source, text in medical_sources.items()}
             
             col1, col2 = st.columns([2, 1])
             with col1:
                 st.subheader("🤖 LLM Response:")
-                st.markdown(highlighted_response, unsafe_allow_html=True)
+                st.markdown(highlighted_llm, unsafe_allow_html=True)
+                plot_bias_distribution(bias_detected_llm, "Bias in LLM Response")
             
             with col2:
-                st.subheader("📊 Trustworthiness Score:")
-                st.metric(label="Similarity to trusted sources", value=f"{similarity_score:.2f}")
-                
-                st.subheader("📜 Citations:")
-                if citations:
-                    for citation in citations:
-                        st.markdown(citation)
-                else:
-                    st.warning("No relevant citations found.")
-                
-                st.subheader("⚠️ Bias Detection:")
-                if bias_detected:
-                    bias_report = "Potential bias detected in: " + ", ".join(bias_detected.keys())
-                    st.warning(bias_report)
-                else:
-                    st.success("No explicit bias detected.")
-
-        feedback = st.text_area("Provide Feedback", key="feedback_input", help="Share any corrections, concerns, or additional insights.")
-        if st.button("Submit Feedback", key="feedback_button"):
-            if feedback:
-                if save_feedback(query, llm_response, feedback):
-                    st.success("✅ Thank you! Your feedback has been recorded.")
-            else:
-                st.warning("⚠️ Please enter feedback before submitting.")
+                st.subheader("📜 Medical Sources:")
+                for source_name, content in medical_sources.items():
+                    st.markdown(f"### {source_name}")
+                    st.markdown(content[:500] + "...") if content != "No data found" else st.warning(f"No data found for {source_name}.")
+                    plot_bias_distribution(bias_detected_sources[source_name], f"Bias in {source_name}")
     else:
         st.warning("Please enter a medical question.")
