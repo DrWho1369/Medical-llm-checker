@@ -8,7 +8,6 @@ from sentence_transformers import SentenceTransformer, util
 import re
 from textblob import TextBlob
 import nltk
-from nltk.tokenize import sent_tokenize, word_tokenize
 
 # Define a persistent download directory for NLTK models
 NLTK_DATA_PATH = os.path.join(os.getcwd(), "nltk_data")
@@ -91,7 +90,29 @@ def detect_bias(text):
     
     detected_bias = {}
     highlighted_text = text
-    sentences = sent_tokenize(text)  # Tokenize sentences
+    def detect_bias(text):
+    """Detect potential bias using simple sentence tokenization."""
+    bias_indicators = {
+        "Gender": ["male", "female", "men", "women", "transgender", "non-binary"],
+        "Race": ["Black", "White", "Asian", "Hispanic", "Caucasian", "Indigenous"],
+        "Age": ["elderly", "young", "children", "teenager", "middle-aged"],
+        "Socioeconomic": ["rich", "poor", "low-income", "high-income", "privileged", "underprivileged"]
+    }
+    
+    detected_bias = {}
+    highlighted_text = text
+    sentences = text.split(". ")  # Simple sentence splitting using periods
+    
+    for category, terms in bias_indicators.items():
+        for sentence in sentences:
+            words = sentence.split()  # Tokenize words
+            for term in terms:
+                if term in words:
+                    detected_bias[category] = detected_bias.get(category, []) + [(term, sentence)]
+                    highlighted_text = highlighted_text.replace(term, f"**{term}**")
+    
+    return detected_bias, highlighted_text
+
     
     for category, terms in bias_indicators.items():
         for sentence in sentences:
