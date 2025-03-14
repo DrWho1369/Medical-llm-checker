@@ -66,17 +66,6 @@ def get_medical_sources(query):
     return results
 
 def detect_bias(text):
-    """Detect potential bias using NLTK for tokenization."""
-    bias_indicators = {
-        "Gender": ["male", "female", "men", "women", "transgender", "non-binary"],
-        "Race": ["Black", "White", "Asian", "Hispanic", "Caucasian", "Indigenous"],
-        "Age": ["elderly", "young", "children", "teenager", "middle-aged"],
-        "Socioeconomic": ["rich", "poor", "low-income", "high-income", "privileged", "underprivileged"]
-    }
-    
-    detected_bias = {}
-    highlighted_text = text
-    def detect_bias(text):
     """Detect potential bias using simple sentence tokenization."""
     bias_indicators = {
         "Gender": ["male", "female", "men", "women", "transgender", "non-binary"],
