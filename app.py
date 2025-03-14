@@ -130,21 +130,20 @@ if st.button("🔎 Analyze Response"):
             bias_detected_llm, highlighted_llm = detect_bias(llm_response)
             bias_detected_sources = {source: detect_bias(text)[0] for source, text in medical_sources.items()}
             
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.subheader("🤖 LLM Response:")
-                st.markdown(highlighted_llm, unsafe_allow_html=True)
-                plot_bias_distribution(bias_detected_llm, "Bias in LLM Response")
             
-            with col2:
-                st.subheader("📜 Medical Sources:")
-                for source_name, content in medical_sources.items():
-                    st.markdown(f"### {source_name}")
-                    if content and content != "No data found":
-                        st.markdown(content[:500] + "...")
-                    else:
-                        st.warning(f"No data found for {source_name}.")
+            st.subheader("🤖 LLM Response:")
+            st.markdown(highlighted_llm, unsafe_allow_html=True)
+            plot_bias_distribution(bias_detected_llm, "Bias in LLM Response")
+            
+            
+            st.subheader("📜 Medical Sources:")
+            for source_name, content in medical_sources.items():
+                st.markdown(f"### {source_name}")
+                if content and content != "No data found":
+                    st.markdown(content[:500] + "...")
+                else:
+                    st.warning(f"No data found for {source_name}.")
 
-                    plot_bias_distribution(bias_detected_sources[source_name], f"Bias in {source_name}")
+                plot_bias_distribution(bias_detected_sources[source_name], f"Bias in {source_name}")
     else:
         st.warning("Please enter a medical question.")
