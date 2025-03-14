@@ -9,21 +9,7 @@ import re
 from textblob import TextBlob
 import nltk
 
-# Define a persistent download directory for NLTK models
-NLTK_DATA_PATH = os.path.join(os.getcwd(), "nltk_data")
 
-# Ensure the directory exists
-if not os.path.exists(NLTK_DATA_PATH):
-    os.makedirs(NLTK_DATA_PATH)
-
-# Set the NLTK data path
-nltk.data.path.append(NLTK_DATA_PATH)
-
-# Download the punkt tokenizer into this directory if it's missing
-try:
-    nltk.data.find("tokenizers/punkt")
-except LookupError:
-    nltk.download("punkt", download_dir=NLTK_DATA_PATH)
 
 
 def get_llm_response(query):
