@@ -140,7 +140,11 @@ if st.button("🔎 Analyze Response"):
                 st.subheader("📜 Medical Sources:")
                 for source_name, content in medical_sources.items():
                     st.markdown(f"### {source_name}")
-                    st.markdown(content[:500] + "...") if content != "No data found" else st.warning(f"No data found for {source_name}.")
+                    if content and content != "No data found":
+                        st.markdown(content[:500] + "...")
+                    else:
+                        st.warning(f"No data found for {source_name}.")
+
                     plot_bias_distribution(bias_detected_sources[source_name], f"Bias in {source_name}")
     else:
         st.warning("Please enter a medical question.")
