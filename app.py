@@ -106,7 +106,7 @@ def plot_bias_distribution(bias_data, title):
         categories = list(bias_data.keys())
         counts = [len(bias_data[cat]) for cat in categories]
         
-        plt.figure(figsize=(6, 4))
+        plt.figure(figsize=(4, 3))
         plt.bar(categories, counts, color=["red", "blue", "green", "purple"])
         plt.xlabel("Bias Categories")
         plt.ylabel("Occurrences")
