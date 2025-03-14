@@ -7,4 +7,3 @@ sentence-transformers
 matplotlib
 textblob
 nltk
-os
