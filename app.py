@@ -88,16 +88,6 @@ def detect_bias(text):
     
     return detected_bias, highlighted_text
 
-    
-    for category, terms in bias_indicators.items():
-        for sentence in sentences:
-            words = word_tokenize(sentence)  # Tokenize words
-            for term in terms:
-                if term in words:
-                    detected_bias[category] = detected_bias.get(category, []) + [(term, sentence)]
-                    highlighted_text = highlighted_text.replace(term, f"**{term}**")
-    
-    return detected_bias, highlighted_text
 
 
 def plot_bias_distribution(bias_data, title):
@@ -111,7 +101,7 @@ def plot_bias_distribution(bias_data, title):
         plt.xlabel("Bias Categories")
         plt.ylabel("Occurrences")
         plt.title(title)
-        st.pyplot(plt)
+        st.pyplot(plt, use_container_width=True)
     else:
         st.info("No bias detected.")
 
